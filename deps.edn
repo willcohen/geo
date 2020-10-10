@@ -9,14 +9,32 @@
                        com.fasterxml.jackson.dataformat/jackson-dataformat-smile #:mvn{:version "2.10.2"},
                        criterium #:mvn{:version "0.4.6"},
                        midje #:mvn{:version "1.10.5"},
-                       org.clojure/clojure #:mvn{:version "1.10.3"}}}},
+                       org.clojure/clojure #:mvn{:version "1.10.3"}}}
+    :cljs-test {:extra-paths ["test" "test/geo"]
+                :extra-deps {olical/cljs-test-runner {:mvn/version "3.7.0"}}
+                :main-opts ["-m" "cljs-test-runner.main"]},
+    :none {:main-opts ["-m" "cljs-test-runner.main" "-c" "./none.edn"]},
+    :simple {:main-opts ["-m" "cljs-test-runner.main" "-c" "./simple.edn"]},
+    :advanced {:main-opts ["-m" "cljs-test-runner.main" "-c" "./advanced.edn"]},
+    :advanced-web {:extra-paths ["test"]},
+    :test {:extra-paths ["test"]
+           :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                   :sha "209b64504cb3bd3b99ecfec7937b358a879f55c1"}}
+           :main-opts ["-m" "cognitect.test-runner"]},
+    :cider-cljs { :main-opts
+                 ["-m" "nrepl.cmdline" "--middleware"
+                  "[cider.nrepl/cider-middleware,cider.piggieback/wrap-cljs-repl]"]}},
  :deps {ch.hsr/geohash #:mvn{:version "1.4.0"},
         com.uber/h3 #:mvn{:version "3.7.1"},
+        criterium {:mvn/version "0.4.5"},
         org.clojure/math.numeric-tower #:mvn{:version "0.0.5"},
         org.locationtech.jts.io/jts-io-common #:mvn{:version "1.18.2"},
         org.locationtech.jts/jts-core #:mvn{:version "1.18.2"},
         org.locationtech.proj4j/proj4j #:mvn{:version "1.1.4"},
         org.locationtech.spatial4j/spatial4j #:mvn{:version "0.8"},
-        org.wololo/jts2geojson #:mvn{:version "0.16.1"}},
+        org.wololo/jts2geojson #:mvn{:version "0.16.1"},
+        org.clojure/clojurescript #:mvn{:version "1.10.773"},
+        org.clojure/tools.namespace #:mvn{:version "1.0.0"}
+        cider/piggieback #:mvn{:version "0.4.2"}},
  :mvn/repos {"releases" {:url "https://clojars.org/repo"},
              "snapshots" {:url "https://clojars.org/repo"}}}

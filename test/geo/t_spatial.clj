@@ -233,7 +233,7 @@
        (facts "Splitting simple linestring over max length"
               (let [ls (jts/linestring-wkt [0 0 0 2])
                     resegmented (s/resegment ls 10000)]
-                (s/length ls) => 221149.4533708848
+                (s/length ls) => (roughly 221149.4533708848)
                 (count resegmented) => 23
                 (reduce + (map s/length resegmented)) => (roughly 221149)))
        (fact "Splitting linestring under max gives single segment"

@@ -2,20 +2,37 @@
 
 ## Unreleased
 
+### ClojureScript
+
+* Port `geo.crs` from `.clj` to `.cljc`, adding all functionality using `proj4js`.
+* Port `geo.jts` to a new `geo.jsts` namespace, adding all functionality using `jsts`.
+* Port `geo.h3` from `.clj` to `.cljc`. Because `h3-js` only makes string-based H3 indexes available, `geo.h3`'s protocols are not currently necessary in ClojureScript.
+* Partially port `geo.spatial` from `.clj` to `.cljc`, adding the `Point` and `Shapelike` protocols. Because there is no `spatial4j` equivalent for Javascript, functionality using that library remains unported.
+* WIP Move all tests from `midje` to `clojure.test`, allowing tests to be run in both Clojure and ClojureScript.
+* WIP Pass all ClojureScript tests with compilation levels of `none`, `simple`, `whitespace`, and `advanced`.`
+
+### Clojure
+
 * **Deprecation**: Move `jts/transform-geom`, `jts/get-srid`, `jts/set-srid`, `jts/pm`, `jts/default-srid`, and `jts/gf-wgs84` to `geo.crs`, leaving aliases in `geo.jts` during deprecation.
 * **Deprecation**: Deprecate `jts/gf` in favor of `crs/get-geometry-factory`, leaving alias in `geo.jts` during deprecation.
 * **Deprecation**: Deprecate `jts/get-factory` in favor of `crs/get-geometry-factory`, leaving alias in `geo.jts` during deprecation.
 * **Deprecation**: Deprecate `jts/polygons` in favor of `jts/geometries`, leaving alias in place during deprecation.
+* **Deprecation**: Deprecate `crs/starts-with?` in favor of `clojure.string/starts-with?`, leaving alias in place during deprecation.
+* **Deprecation**: Deprecate `crs/includes?` in favor of `clojure.string/includes?`, leaving alias in place during deprecation.
 * Bump `geohash` to 1.4.0, which can use bounding boxes over the meridian
 * For development, bump `lein-midje` to 3.2.2 and `cheshire` to 5.10.0, removing extra `jackson` dependencies
 * Bump `h3` to 3.6.3
 * Remove singularity error with `distance` by using spheroidal `spatial4j` Vincenty calculation when input point is at a pole, but otherwise using the `geohash` ellipsoidal Vincenty calculation.
-* Modify `set-srid` to use `.createGeometry` instead of `.setSRID`, improving passthrough of projections within geometries and reducing need to manually set projections after operations
-* Add `get-geometry-factory` to `Transformable`, and extend `Transformable` to `Geometry` and `GeometryFactory`
-* Add `transform-helper` and `create-transform` to `Transformable`, and extend `Transformable` to `CoordinateTransform`
-* Allow `transform-geom` to accept `GeometryFactory` as a second argument, passing `transform-geom` to protocol-based `transform-helper` to improve dispatch
-* Allow `to-jts` to accept all of the argument arities of `transform-geom`
-* Add `get-parameters` and `get-parameter-string` functions to `geo.crs`
+* Modify `set-srid` to use `.createGeometry` instead of `.setSRID`, improving passthrough of projections within geometries and reducing need to manually set projections after operations.
+* Add `get-geometry-factory` to `Transformable`, and extend `Transformable` to `Geometry` and `GeometryFactory`.
+* Add `transform-helper` and `create-transform` to `Transformable`, and extend `Transformable` to `CoordinateTransform`.
+* Allow `transform-geom` to accept `GeometryFactory` as a second argument, passing `transform-geom` to protocol-based `transform-helper` to improve dispatch.
+* Allow `to-jts` to accept all of the argument arities of `transform-geom`.
+* Add `get-parameters` and `get-parameter-string` functions to `geo.crs`.
+* Hide various `geo.h3` protocol helpers that were incorrectly left public.
+* Remove the redundant internal 3-arity version of `transform-coord`.
+* Correctly trim `proj4` whitespace with `get-parameter-string`.
+* Replace `distance` calculation from `geohash` library with Vincenty calculator in Clojure, avoiding the pole singularity problem and enabling cross-platform parity 
 
 ## 3.0.0 to 3.0.1
 

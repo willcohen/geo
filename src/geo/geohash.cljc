@@ -2,78 +2,212 @@
   "Working with geohashes."
   (:require [geo.crs :as crs]
             [geo.spatial :as spatial]
-            [geo.jts :as jts])
-  (:import (ch.hsr.geohash WGS84Point GeoHash)
-           (org.locationtech.spatial4j.shape Shape)
-           (org.locationtech.spatial4j.shape.impl RectangleImpl)
-           (org.locationtech.spatial4j.context.jts JtsSpatialContext)))
+            #?(:clj [geo.jts :as jts]
+               :cljs [geo.jsts :as geo.jsts])
+            #?(:cljs [ngeohash])
+            #?(:cljs [jsts])
+            #?(:cljs [goog.object :as gobj]))
+  #?(:clj (:import (ch.hsr.geohash WGS84Point GeoHash)
+                   (org.locationtech.spatial4j.shape Shape)
+                   (org.locationtech.spatial4j.shape.impl RectangleImpl)
+                   (org.locationtech.spatial4j.context.jts JtsSpatialContext))))
+
+#?(:clj (set! *warn-on-reflection* true)
+   :cljs (set! *warn-on-infer* true))
+
+#?(:cljs
+   (deftype Geohash [id precision]))
 
 (defn geohash
   "Creates a geohash from a string, or at the given point with the given bit
   precision."
   ([string]
-   (GeoHash/fromGeohashString string))
+   #?(:clj (GeoHash/fromGeohashString string)
+      :cljs (->Geohash string (* 5 (.-length ^js/string string)))))
   ([point precision]
-   (geohash (spatial/latitude point)
-            (spatial/longitude point)
-            precision))
+    (geohash (spatial/latitude point)
+             (spatial/longitude point)
+             precision))
   ([lat long precision]
-   (GeoHash/withBitPrecision lat long precision)))
+   #?(:clj (GeoHash/withBitPrecision lat long precision)
+      :cljs (->Geohash (ngeohash/encode_int lat long precision) precision))))
 
-(defn bbox ^Shape [^GeoHash geohash]
-  (let [box (.getBoundingBox geohash)]
-    (RectangleImpl. (.getWestLongitude box)
-                    (.getEastLongitude box)
-                    (.getSouthLatitude box)
-                    (.getNorthLatitude box)
-                    spatial/earth)))
+#?(:cljs
+   (defprotocol GeohashIdentifier
+     (-decode [this] [this precision])
+     (-decode-bbox [this] [this precision])
+     (-neighbor [this direction] [this direction precision])
+     (-neighbors [this] [this precision])))
 
-(defn bbox-geom ^org.locationtech.jts.geom.Polygon [^GeoHash geohash]
-  (jts/set-srid (.getGeometryFrom JtsSpatialContext/GEO (bbox geohash))
-                crs/gf-wgs84))
+#?(:cljs
+   (extend-protocol GeohashIdentifier
+     string
+     (-decode [this] (ngeohash/decode this))
+     (-decode-bbox [this] (ngeohash/decode_bbox this))
+     (-neighbor [this direction] (ngeohash/neighbor this direction))
+     (-neighbors [this] (ngeohash/neighbors this))
 
-(extend-protocol spatial/Shapelike
-  GeoHash
-  (to-shape [^GeoHash geohash] (bbox geohash))
-  (to-jts
-    ([^GeoHash geohash] (bbox-geom geohash))
-    ([^GeoHash geohash srid]
-     (spatial/to-jts (bbox-geom geohash) srid))
-    ([^GeoHash geohash c1 c2]
-     (spatial/to-jts (bbox-geom geohash) c1 c2))
-    ([^GeoHash geohash c1 c2 geometry-factory]
-     (spatial/to-jts (bbox-geom geohash) c1 c2 geometry-factory)))
+     number
+     (-decode [this precision] (ngeohash/decode_int this precision))
+     (-decode-bbox [this precision] (ngeohash/decode_bbox_int this precision))
+     (-neighbor [this direction precision]
+       (ngeohash/neighbor_int this direction precision))
+     (-neighbors [this precision] (ngeohash/neighbors_int this precision))
 
-  WGS84Point
-  (to-shape [this] (spatial/spatial4j-point this))
-  (to-jts
-    ([this] (spatial/jts-point this))
-    ([this srid] (spatial/to-jts (spatial/jts-point this) srid))
-    ([this c1 c2] (spatial/to-jts (spatial/jts-point this) c1 c2))
-    ([this c1 c2 geometry-factory]
-     (spatial/to-jts (spatial/jts-point this) c1 c2 geometry-factory))))
+     Geohash
+     (-decode [this] (if (string? (.-id this))
+                       (-decode (.-id this))
+                       (-decode (.-id this) (.-precision this))))
+     (-decode-bbox [this] (if (string? (.-id this))
+                       (-decode-bbox (.-id this))
+                       (-decode-bbox (.-id this) (.-precision this))))
+     (-neighbor [this direction] (if (string? (.-id this))
+                                   (geohash (-neighbor (.-id this) direction))
+                                   (geohash (-neighbor (.-id this) direction
+                                                       (.-precision this))
+                                            (.-precision this))))
+     (-neighbors [this] (if (string? (.-id this))
+                          (map geohash (-neighbors (.-id this)))
+                          (map #(geohash % (.-precision this))
+                               (-neighbors (.-id this) (.-precision this)))))))
 
-(defn northern-neighbor [^GeoHash h] (.getNorthernNeighbour h))
-(defn eastern-neighbor [^GeoHash h] (.getEasternNeighbour h))
-(defn western-neighbor [^GeoHash h] (.getWesternNeighbour h))
-(defn southern-neighbor [^GeoHash h] (.getSouthernNeighbour h))
-(defn neighbors [^GeoHash h] (vec (.getAdjacent h)))
+
+
+
+#?(:clj
+   (defn bbox ^Shape [^GeoHash geohash]
+     (let [box (.getBoundingBox geohash)]
+       (RectangleImpl. (.getWestLongitude box)
+                       (.getEastLongitude box)
+                       (.getSouthLatitude box)
+                       (.getNorthLatitude box)
+                       spatial/earth)))
+   :cljs
+   (defn bbox ^jsts.geom.Envelope [^Geohash geohash]
+     (let [coords (-decode-bbox geohash)
+
+           coord-0 (geo.jsts/coordinate (aget coords 1)
+                                        (aget coords 0))
+           coord-1 (geo.jsts/coordinate (aget coords 3)
+                                        (aget coords 2))]
+       (geo.jsts/envelope coord-0 coord-1))))
+
+#?(:clj
+   (defn bbox-geom ^org.locationtech.jts.geom.Polygon [^GeoHash geohash]
+     (jts/set-srid (.getGeometryFrom JtsSpatialContext/GEO (bbox geohash))
+                   crs/gf-wgs84))
+   :cljs
+   (defn bbox-geom [^Geohash geohash]
+     (let [coords (-decode-bbox geohash)
+           lat1 (aget coords 0)
+           lat2 (aget coords 2)
+           lon1 (aget coords 1)
+           lon2 (aget coords 3)
+           coord-0 (geo.jsts/coordinate lon1 lat1)
+           coord-1 (geo.jsts/coordinate lon2 lat1)
+           coord-2 (geo.jsts/coordinate lon2 lat2)
+           coord-3 (geo.jsts/coordinate lon1 lat2)]
+       (geo.jsts/linear-ring
+        (array coord-0 coord-1 coord-2 coord-3 coord-0)))))
+
+#?(:clj
+   (extend-protocol spatial/Shapelike
+     GeoHash
+     (to-shape [^GeoHash geohash] (bbox geohash))
+     (to-jts
+       ([^GeoHash geohash] (bbox-geom geohash))
+       ([^GeoHash geohash srid]
+        (spatial/to-jts (bbox-geom geohash) srid))
+       ([^GeoHash geohash c1 c2]
+        (spatial/to-jts (bbox-geom geohash) c1 c2))
+       ([^GeoHash geohash c1 c2 geometry-factory]
+        (spatial/to-jts (bbox-geom geohash) c1 c2 geometry-factory)))
+
+     WGS84Point
+     (to-shape [this] (spatial/spatial4j-point this))
+     (to-jts
+       ([this] (spatial/jts-point this))
+       ([this srid] (spatial/to-jts (spatial/jts-point this) srid))
+       ([this c1 c2] (spatial/to-jts (spatial/jts-point this) c1 c2))
+       ([this c1 c2 geometry-factory]
+        (spatial/to-jts (spatial/jts-point this) c1 c2 geometry-factory))))
+   :cljs
+   (extend-protocol spatial/Shapelike
+     Geohash
+     (to-jsts
+       ([^Geohash geohash] (bbox-geom geohash))
+       ([^Geohash geohash srid]
+        (spatial/to-jsts (bbox-geom geohash) srid))
+       ([^Geohash geohash c1 c2]
+        (spatial/to-jsts (bbox-geom geohash) c1 c2))
+       ([^Geohash geohash c1 c2 geometry-factory]
+        (spatial/to-jsts (bbox-geom geohash) c1 c2 geometry-factory)))))
+
+
+#?(:clj
+   (defn northern-neighbor [^GeoHash h] (.getNorthernNeighbour h))
+   :cljs
+   (defn northern-neighbor [^Geohash h] (-neighbor h (array 1 0))))
+
+#?(:clj
+   (defn eastern-neighbor [^GeoHash h] (.getEasternNeighbour h))
+   :cljs
+   (defn eastern-neighbor [^Geohash h] (-neighbor h (array 0 1))))
+
+#?(:clj
+   (defn western-neighbor [^GeoHash h] (.getWesternNeighbour h))
+   :cljs
+   (defn western-neighbor [^Geohash h] (-neighbor h (array 0 -1))))
+
+#?(:clj
+   (defn southern-neighbor [^GeoHash h] (.getSouthernNeighbour h))
+   :cljs
+   (defn southern-neighbor [^Geohash h] (-neighbor h (array -1 0))))
+
+#?(:clj
+   (defn neighbors [^GeoHash h] (vec (.getAdjacent h)))
+   :cljs
+   (defn neighbors [^Geohash h] (vec (-neighbors h))))
+
+#?(:clj (defn significant-bits [^GeoHash geohash]
+          (.significantBits geohash))
+   :cljs (defn significant-bits [^Geohash geohash]
+           (.-precision geohash)))
+
+#?(:clj (defn character-precision [^GeoHash geohash]
+          (.getCharacterPrecision geohash))
+   :cljs (defn character-precision [^Geohash geohash]
+           (if (string? (.-id geohash))
+             (.-length ^js/string (.-id geohash)))))
+
 
 (defn subdivide
   "Given a geohash, returns all geohashes inside it, of a given precision."
-  ([^GeoHash geohash]
-   (subdivide geohash (inc (.significantBits geohash))))
-  ([^GeoHash geohash precision]
-   (let [number (Math/pow 2 (- precision (.significantBits geohash)))]
-     (->> (GeoHash/fromLongValue (.longValue geohash) precision)
-          (iterate #(.next ^GeoHash %))
-          (take number)))))
+  #?(:clj ([^GeoHash geohash]
+           (subdivide geohash (inc (significant-bits geohash))))
+     :cljs ([^Geohash geohash]
+            (subdivide geohash (inc (significant-bits geohash)))))
+  #?(:clj
+     ([^GeoHash geohash precision]
+      (let [number (Math/pow 2 (- precision (significant-bits geohash)))]
+        (->> (GeoHash/fromLongValue (.longValue geohash) precision)
+             (iterate #(.next ^GeoHash %))
+             (take number))))
+     :cljs
+     ([^Geohash geohash precision]
+      (let [box ^js/jsts.geom.Envelope (bbox geohash)]
+        (-> (ngeohash/bboxes_int (+ (.getMinY box) 1e-7)
+                                 (+ (.getMinX box) 1e-7)
+                                 (- (.getMaxY box) 1e-7)
+                                 (- (.getMaxX box) 1e-7)
+                                 precision))))))
 
 (defn subdivide-levels
   "Given a geohash and a range of levels, return all geohashes inside the
    given geohash at all the levels in the range"
-  [^GeoHash geohash min-precision max-precision]
-  (let [start-precision (max (.significantBits geohash) min-precision)
+  #?(:clj [^GeoHash geohash min-precision max-precision]
+     :cljs [^Geohash geohash min-precision max-precision])
+  (let [start-precision (max (significant-bits geohash) min-precision)
         end-precision (max start-precision max-precision)]
     (->> (range start-precision (inc end-precision))
          (mapcat #(subdivide geohash %)))))
@@ -146,26 +280,36 @@
 
 (defn geohash-center
   "Returns the center point of a geohash."
-  [^GeoHash geohash]
-  (.getBoundingBoxCenter geohash))
+  #?(:clj [^GeoHash geohash]
+     :cljs [^Geohash geohash])
+  #?(:clj (.getBoundingBoxCenter geohash)
+     :cljs (let [g (-decode geohash)]
+             (geo.jsts/point (gobj/get g "latitude")
+                             (gobj/get g "longitude")))))
 
 (defn geohash-midline-dimensions
   "Returns a vector of [lat-extent long-extent], where lat-extent is the length
   of the geohash through the midpoint of top and bottom, and long-extent is the
   length of the geohash through the midpoint of left and right sides. All
   figures in meters."
-  [^GeoHash geohash]
-  (let [box     (.getBoundingBox geohash)
-        min-lat (.getSouthLatitude box)
-        max-lat (.getNorthLatitude box)
-        min-long (.getWestLongitude box)
-        max-long (.getEastLongitude box)
+  #?(:clj [^GeoHash geohash]
+     :cljs [^Geohash geohash])
+  (let [box     #?(:clj (.getBoundingBox geohash)
+                   :cljs (bbox geohash))
+        min-lat #?(:clj (.getSouthLatitude box)
+                   :cljs (.getMinY box))
+        max-lat #?(:clj (.getNorthLatitude box)
+                   :cljs (.getMaxY box))
+        min-long #?(:clj (.getWestLongitude box)
+                    :cljs (.getMinX box))
+        max-long #?(:clj (.getEastLongitude box)
+                    :cljs (.getMaxX box))
         mean-lat (/ (+ min-lat max-lat) 2)
         mean-long (/ (+ min-long max-long) 2)]
-    [(spatial/distance (spatial/geohash-point min-lat mean-long)
-               (spatial/geohash-point max-lat mean-long))
-     (spatial/distance (spatial/geohash-point mean-lat min-long)
-               (spatial/geohash-point mean-lat max-long))]))
+    [(spatial/distance (spatial/point min-lat mean-long)
+               (spatial/point max-lat mean-long))
+     (spatial/distance (spatial/point mean-lat min-long)
+               (spatial/point mean-lat max-long))]))
 
 (defn geohash-midline-area
   "An estimate of a geohash's area, in square meters, based on its midline
@@ -176,9 +320,16 @@
 (defn geohash-error
   "Returns the error (i.e. the distance in meters between opposite corners) of
   the given geohash."
-  [^GeoHash geohash]
-  (let [box (.getBoundingBox geohash)]
-    (spatial/distance (.getSouthEastCorner box) (.getNorthWestCorner box))))
+  #?(:clj [^GeoHash geohash]
+     :cljs [^Geohash geohash])
+  (let [box #?(:clj (.getBoundingBox geohash)
+               :cljs (bbox geohash))]
+    (spatial/distance #?(:clj (.getSouthEastCorner box)
+                         :cljs (geo.jsts/point (.getMinY box)
+                                               (.getMaxX box)))
+                      #?(:clj (.getNorthWestCorner box)
+                         :cljs (geo.jsts/point (.getMaxY box)
+                                               (.getMinX box))))))
 
 (defn geohash-max-error
   "Returns the maximum error (i.e. the distance between opposite corners of the
@@ -189,11 +340,11 @@
 
 (defn string
   "Returns the base32 encoded string value of a geohash."
-  [^GeoHash geohash]
-  (.toBase32 geohash))
+  #?(:clj [^GeoHash geohash]
+     :cljs [^Geohash geohash])
+  #?(:clj (.toBase32 geohash)
+     :cljs (.-id geohash)))
 
-(defn significant-bits [^GeoHash geohash] (.significantBits geohash))
-(defn character-precision [^GeoHash geohash] (.getCharacterPrecision geohash))
 
 (def degrees-precision-long-cache
   (map (comp spatial/width (partial geohash 45 45)) (range 0 64)))
@@ -210,10 +361,12 @@
   "Estimates the precision which generates geohash regions on the scale of the
   given shape."
   [shape]
-  (min (least-upper-bound-index degrees-precision-lat-cache (spatial/height shape))
-       (least-upper-bound-index degrees-precision-long-cache (spatial/height shape))))
+  (min (least-upper-bound-index degrees-precision-lat-cache
+                                (spatial/height shape))
+       (least-upper-bound-index degrees-precision-long-cache
+                                (spatial/height shape))))
 
-(defn- queue [] clojure.lang.PersistentQueue/EMPTY)
+#?(:clj (defn- queue [] clojure.lang.PersistentQueue/EMPTY))
 
 (defn- geohashes-intersecting-matches!
   "Given geohash and shape-relation, modify the matches list as necessary
@@ -236,6 +389,7 @@
       (conj! matches gh)
       matches)))
 
+#?(:clj
 (defn geohashes-intersecting
   ([shape desired-level] (geohashes-intersecting shape desired-level desired-level))
   ([shape min-level max-level]
@@ -252,10 +406,10 @@
                next (peek gh-q)]
            (if (and next (<= (significant-bits next) max-level))
              (recur next matches gh-q)
-             (persistent! matches)))))))
-
-(defn geohashes-near
-  "Returns a list of geohashes of the given precision within radius meters of
+             (persistent! matches))))))))
+#?(:clj
+   (defn geohashes-near
+     "Returns a list of geohashes of the given precision within radius meters of
   the given point."
-  [point radius precision]
-  (geohashes-intersecting (spatial/circle point radius) precision))
+     [point radius precision]
+     (geohashes-intersecting (spatial/circle point radius) precision)))

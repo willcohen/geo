@@ -1,0 +1,9 @@
+{:main geo.tests
+ :output-to "out/index.js"
+ :output-dir "out"
+ :target :bundle
+ :infer-externs true
+ :bundle-cmd {:none ["npx" "webpack" "--mode=development"]
+              :default ["npx" "webpack"]}
+ :pseudo-names true
+ :pretty-print true}

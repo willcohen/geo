@@ -3,6 +3,10 @@
   polygon->edges, bounding boxes, normal vectors, linear coordinates,
   bisections, box intersections, bounded-space partitioning, and so on.")
 
+#?(:clj (set! *warn-on-reflection* true)
+   :cljs (set! *warn-on-infer* true))
+
+
 (def EPSILON 1.0e-10)
 
 (defn region-contains?

@@ -1,7 +1,8 @@
 (ns geo.jts
   "Wrapper for the locationtech JTS spatial library. Constructors for points,
   coordinate sequences, rings, polygons, multipolygons, and so on."
-  (:require [geo.crs :as crs :refer [Transformable]])
+  (:require [geo.crs :as crs :refer [Transformable]]
+            [geo.impl.jts :as impl])
   (:import (org.locationtech.jts.geom Coordinate
                                       CoordinateSequence
                                       CoordinateXYZM
@@ -19,8 +20,10 @@
                                       Polygon
                                       PrecisionModel)))
 
+(set! *warn-on-reflection* true)
+
 (def ^PrecisionModel pm ; Deprecated as of 3.1.0
-  "Deprecated as of 3.1.0, in favor of geo.crs/pm." crs/pm)
+  "Deprecated as of 3.1.0, in favor of geo.impl.jts/pm." impl/pm)
 (def ^GeometryFactory gf ; Deprecated as of 3.1.0
   "Deprecated as of 3.1.0, in favor of geo.crs/get-geometry-factory."
   crs/get-geometry-factory)
@@ -45,21 +48,21 @@
 
 (defn coordinate
   "Creates a Coordinate."
-  ([^double x ^double y]
-   (Coordinate. x y))
-  ([^double x ^double y ^double z]
-   (Coordinate. x y z))
-  ([^double x ^double y ^double z ^double m]
-   (CoordinateXYZM. x y z m)))
+  ([x y]
+   (impl/coordinate x y))
+  ([x y z]
+   (impl/coordinate x y z))
+  ([x y z m]
+   (impl/coordinate-xyzm x y z m)))
 
 (defn ^Point point
   "Creates a Point from a Coordinate, a lat/long, or an x,y pair with an SRID."
   ([^Coordinate coordinate]
-   (.createPoint crs/gf-wgs84 coordinate))
+   (impl/point coordinate crs/gf-wgs84))
   ([lat long]
-   (point long lat crs/gf-wgs84))
+   (point (coordinate long lat)))
   ([x y srid]
-   (.createPoint (crs/get-geometry-factory srid) ^Coordinate (coordinate x y))))
+   (impl/point (coordinate x y) (crs/get-geometry-factory srid))))
 
 (defn ^"[Lorg.locationtech.jts.geom.Coordinate;" coord-array
   [coordinates]
@@ -85,17 +88,22 @@
   [polygons]
   (into-array Polygon polygons))
 
-(defn ^MultiPoint multi-point
-  "Given a list of points, generates a MultiPoint."
-  [points]
-  (.createMultiPoint (crs/get-geometry-factory (first points))
-                     (point-array points)))
-
 (defn ^CoordinateSequence coordinate-sequence
   "Given a list of Coordinates, generates a CoordinateSequence."
   [coordinates]
   (-> (.getCoordinateSequenceFactory crs/gf-wgs84)
       (.create (coord-array coordinates))))
+
+(defn coord
+  [^Point point]
+  (.getCoordinate point))
+
+(defn ^MultiPoint multi-point
+  "Given a list of points, generates a MultiPoint."
+  [points]
+  (.createMultiPoint (crs/get-geometry-factory (first points))
+                     (coordinate-sequence (map coord points))))
+
 
 (defn ^GeometryCollection geometry-collection
   "Given a list of Geometries, generates a GeometryCollection."
@@ -117,9 +125,9 @@
 (defn ^LineString linestring
   "Given a list of Coordinates, creates a LineString. Allows an optional SRID argument at end."
   ([coordinates]
-   (.createLineString crs/gf-wgs84 (coord-array coordinates)))
+   (.createLineString crs/gf-wgs84 (coordinate-sequence coordinates)))
   ([coordinates srid]
-   (.createLineString (crs/get-geometry-factory srid) (coord-array coordinates))))
+   (.createLineString (crs/get-geometry-factory srid) (coordinate-sequence coordinates))))
 
 (defn ^MultiLineString multi-linestring
   "Given a list of LineStrings, generates a MultiLineString."
@@ -147,10 +155,6 @@
   [^LineString linestring]
   (-> linestring .getCoordinateSequence .toCoordinateArray))
 
-(defn coord
-  [^Point point]
-  (.getCoordinate point))
-
 (defn point-n
   "Get the point for a linestring at the specified index."
   [^LineString linestring idx]
@@ -170,9 +174,9 @@
 (defn ^LinearRing linear-ring
   "Given a list of Coordinates, creates a LinearRing. Allows an optional SRID argument at end."
   ([coordinates]
-   (.createLinearRing crs/gf-wgs84 (coord-array coordinates)))
+   (.createLinearRing crs/gf-wgs84 (coordinate-sequence coordinates)))
   ([coordinates srid]
-   (.createLinearRing (crs/get-geometry-factory srid) (coord-array coordinates))))
+   (.createLinearRing (crs/get-geometry-factory srid) (coordinate-sequence coordinates))))
 
 (defn linear-ring-wkt
   "Makes a LinearRing from a WKT-style data structure: a flat sequence of
@@ -204,7 +208,7 @@
    (polygon-wkt rings crs/gf-wgs84))
   ([rings srid]
    (let [rings (map #(linear-ring-wkt % srid) rings)]
-     (polygon (first rings) (into-array LinearRing (rest rings))))))
+     (polygon (first rings) (linear-ring-array (rest rings))))))
 
 (defn ^MultiPolygon multi-polygon
   "Given a list of polygons, generates a MultiPolygon."

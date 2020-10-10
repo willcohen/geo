@@ -1,0 +1,4 @@
+{:optimizations :advanced
+:pseudo-names true
+:pretty-print true
+}
