@@ -1,0 +1,12 @@
+{
+  "devDependencies": {
+    "webpack": "^5.37.1",
+    "webpack-cli": "^4.7.0"
+  },
+  "dependencies": {
+    "h3-js": "^3.7.2",
+    "jsts": "^2.6.1",
+    "ngeohash": "^0.6.3",
+    "proj4": "^2.7.2"
+  }
+}

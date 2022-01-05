@@ -25,26 +25,26 @@
                                   [criterium "0.4.6"]
                                   [cheshire "5.10.1"]
                                   [midje "1.10.5"]]}
-             :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
-             :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}
-             :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}}
-  :repositories [["snapshots" {:url "https://clojars.org/repo"
-                               :username :env/clojars_username
-                               :password :env/clojars_password
-                               :sign-releases false}]
-                 ["releases"  {:url "https://clojars.org/repo"
-                               :username :env/clojars_username
-                               :password :env/clojars_password
-                               :sign-releases false}]]
-  :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
-                                    :username :env/clojars_username
-                                    :password :env/clojars_password
-                                    :sign-releases false}]
-                        ["snapshots" {:url "https://clojars.org/repo"
-                                      :username :env/clojars_username
-                                      :password :env/clojars_password
-                                      :sign-releases false}]
-                        ["releases"  {:url "https://clojars.org/repo"
-                                      :username :env/clojars_username
-                                      :password :env/clojars_password
-                                      :sign-releases false}]])
+                :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
+                :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}
+                :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}}
+    :repositories [["snapshots" {:url "https://clojars.org/repo"
+                                 :username :env/clojars_username
+                                 :password :env/clojars_password
+                                 :sign-releases false}]
+                   ["releases"  {:url "https://clojars.org/repo"
+                                 :username :env/clojars_username
+                                 :password :env/clojars_password
+                                 :sign-releases false}]]
+                  :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
+                                                    :username :env/clojars_username
+                                                    :password :env/clojars_password
+                                                    :sign-releases false}]
+                                        ["snapshots" {:url "https://clojars.org/repo"
+                                                      :username :env/clojars_username
+                                                      :password :env/clojars_password
+                                                      :sign-releases false}]
+                                        ["releases"  {:url "https://clojars.org/repo"
+                                                      :username :env/clojars_username
+                                                      :password :env/clojars_password
+                                                      :sign-releases false}]])

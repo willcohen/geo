@@ -200,7 +200,9 @@
                                  (+ (.getMinX box) 1e-7)
                                  (- (.getMaxY box) 1e-7)
                                  (- (.getMaxX box) 1e-7)
-                                 precision))))))
+                                 precision)
+            sort
+            dedupe)))))
 
 (defn subdivide-levels
   "Given a geohash and a range of levels, return all geohashes inside the
@@ -366,7 +368,9 @@
        (least-upper-bound-index degrees-precision-long-cache
                                 (spatial/height shape))))
 
-#?(:clj (defn- queue [] clojure.lang.PersistentQueue/EMPTY))
+(defn- queue []
+  #?(:clj clojure.lang.PersistentQueue/EMPTY
+     :cljs cljs.core.PersistentQueue.EMPTY))
 
 (defn- geohashes-intersecting-matches!
   "Given geohash and shape-relation, modify the matches list as necessary
@@ -393,7 +397,8 @@
 (defn geohashes-intersecting
   ([shape desired-level] (geohashes-intersecting shape desired-level desired-level))
   ([shape min-level max-level]
-     (let [shape (spatial/to-shape shape)
+   (let [shape #?(:clj (spatial/to-shape shape)
+                  :cljs (spatial/to-jsts shape 4326))
            update-matches! (partial geohashes-intersecting-matches! min-level max-level)]
        (loop [current (geohash "")
               matches (transient [])

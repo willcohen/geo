@@ -89,6 +89,20 @@ var jsts = {
       "Y": {},
       "Z": {}
     },
+    "CoordinateXY": {
+      "X": {},
+      "Y": {},
+      "Z": {},
+      "M": {}
+    },
+    "CoordinateXYM": {
+      "X": {},
+      "Y": {},
+      "Z": {},
+      "M": {}
+    },
+    "CoordinateXYZM": {
+    },
     "CoordinateList": {
       "coordArrayType": {}
     },
@@ -535,6 +549,78 @@ var jsts = {
   },
   "version": {}
 };
+jsts.geom.Coordinate.prototype = {
+  "getM": function () {},
+  "setOrdinate": function () {},
+  "equals2D": function () {},
+  "setM": function () {},
+  "getZ": function () {},
+  "getOrdinate": function () {},
+  "equals3D": function () {},
+  "equals": function () {},
+  "equalInZ": function () {},
+  "setX": function () {},
+  "compareTo": function () {},
+  "getX": function () {},
+  "setZ": function () {},
+  "clone": function () {},
+  "copy": function () {},
+  "toString": function () {},
+  "distance3D": function () {},
+  "getY": function () {},
+  "setY": function () {},
+  "distance": function () {},
+  "hashCode": function () {},
+  "setCoordinate": function () {}
+};
+jsts.geom.CoordinateXY.prototype = {
+  "setOrdinate": function () {},
+  "getZ": function () {},
+  "getOrdinate": function () {},
+  "setZ": function () {},
+  "copy": function () {},
+  "toString": function () {},
+  "setCoordinate": function () {}
+};
+jsts.geom.CoordinateXYM.prototype = {
+  "getM": function () {},
+  "setOrdinate": function () {},
+  "setM": function () {},
+  "getZ": function () {},
+  "getOrdinate": function () {},
+  "setZ": function () {},
+  "copy": function () {},
+  "toString": function () {},
+  "setCoordinate": function () {}
+};
+jsts.geom.CoordinateXYZM.prototype = {
+  "getM": function () {},
+  "setOrdinate": function () {},
+  "setM": function () {},
+  "getOrdinate": function () {},
+  "copy": function () {},
+  "toString": function () {},
+  "setCoordinate": function () {}
+};
+jsts.geom.CoordinateSequence.prototype = {
+  "getM": function () {},
+  "setOrdinate": function () {},
+  "getZ": function () {},
+  "size": function () {},
+  "getOrdinate": function () {},
+  "getCoordinate": function () {},
+  "getCoordinateCopy": function () {},
+  "createCoordinate": function () {},
+  "getDimension": function () {},
+  "hasM": function () {},
+  "getX": function () {},
+  "hasZ": function () {},
+  "getMeasures": function () {},
+  "expandEnvelope": function () {},
+  "copy": function () {},
+  "getY": function () {},
+  "toCoordinateArray": function () {}
+};
 jsts.geom.Geometry.prototype = {
   "buffer": function () {},
   "contains": function () {},
@@ -569,8 +655,11 @@ jsts.geom.Geometry.prototype = {
 };
 jsts.geom.GeometryCollection.prototype = {
   "buffer": function () {},
+  "compareToSameClass": function () {},
+  "computeEnvelopeInternal": function () {},
   "contains": function () {},
   "convexHull": function () {},
+  "copyInternal": function () {},
   "coveredBy": function () {},
   "covers": function () {},
   "createPointFromInternalCoord": function () {},
@@ -579,18 +668,30 @@ jsts.geom.GeometryCollection.prototype = {
   "disjoint": function () {},
   "distance": function () {},
   "equals": function () {},
+  "equalsExact": function () {},
   "equalsTopo": function () {},
+  "getArea": function () {},
+  "getBoundaryDimension": function () {},
   "getCentroid": function () {},
+  "getCoordinate": function () {},
+  "getCoordinates": function () {},
   "getEnvelopeInternal": function () {},
+  "getGeometryN": function () {},
   "getGeometryType": function () {},
   "getInteriorPoint": function () {},
+  "getNumGeometries": function () {},
+  "getNumPoints": function () {},
+  "getLength": function () {},
+  "getTypeCode": function () {},
   "intersection": function () {},
   "intersects": function () {},
   "isSimple": function () {},
   "isValid": function () {},
   "isWithinDistance": function () {},
+  "normalize": function () {},
   "overlaps": function () {},
   "relate": function () {},
+  "reverseInternal": function () {},
   "symDifference": function () {},
   "toString": function () {},
   "toText": function () {},
@@ -615,6 +716,7 @@ jsts.geom.LineString.prototype = {
   "equals": function () {},
   "equalsTopo": function () {},
   "getCentroid": function () {},
+  "getCoordinateN": function () {},
   "getEnvelopeInternal": function () {},
   "getGeometryType": function () {},
   "getInteriorPoint": function () {},
@@ -772,6 +874,7 @@ jsts.geom.Point.prototype = {
   "equals": function () {},
   "equalsTopo": function () {},
   "getCentroid": function () {},
+  "getCoordinate": function () {},
   "getEnvelopeInternal": function () {},
   "getGeometryType": function () {},
   "getInteriorPoint": function () {},

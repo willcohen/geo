@@ -39,7 +39,7 @@
      [prefix p]
      (let [match
            (re-matches
-            (re-pattern "<([0-9]+)>\\s([.\\s\\w\\+\\_\\-=,<>]+)[<>\\s]*") p)]
+            (re-pattern "<([0-9]+)>\\s([.\\s\\w\\+\\_\\-=,]+)[<>\\s]*") p)]
        {(keyword (clojure.string/join [prefix (nth match 1)])) (nth match 2)})))
 
 #?(:cljs
@@ -73,7 +73,7 @@
 
 (defn epsg-str->srid
   "Converts EPSG string to SRID, if possible."
-  [epsg]
+ [epsg]
   (let [match (epsg-str? epsg)]
     (assert match "Must be a valid EPSG string")
     (#?(:clj Integer/parseInt
@@ -268,7 +268,7 @@
   #?(:clj [^Geometry g ^CoordinateTransform transform ^GeometryFactory gf]
      :cljs [^js/jsts.geom.Geometry g ^CoordinateTransform transform
             ^js/jsts.geom.GeometryFactory gf])
-  (let #?(:clj [g (.copy g)]
+  (let #?(:clj [^Geometry g (.copy g)]
           :cljs [^js/jsts.geom.Geometry g (.copy g)])
     (.apply g (transform-coord-seq-filter transform))
     (set-srid g gf)))
@@ -427,8 +427,8 @@
         this (create-crs tgt)
         (fn [coord] (.forward
                      ^js/proj4 (proj4.
-                      (get-parameters this)
-                      (get-parameters (create-crs tgt))) coord))))
+                      (get-parameter-string this)
+                      (get-parameter-string (create-crs tgt))) coord))))
      (transform-helper
        ([this g]
         (transform-helper
@@ -574,6 +574,15 @@
        ([this c1 c2 gf]
         (transform-helper
          (get-geometry-factory gf) this (create-transform c1 c2))))
+
+     CoordinateTransform
+     (create-transform [this] this)
+     (get-geometry-factory [this] (get-geometry-factory (get-target-crs this)))
+     (transform-helper
+       ([this g]
+        (transform-helper (get-geometry-factory this) g this))
+       ([this g factory]
+        (transform-helper (get-geometry-factory factory) g this)))
 
      jsts.geom.GeometryFactory
      (create-crs [this] (create-crs (get-srid this)))

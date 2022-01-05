@@ -28,7 +28,12 @@
                    (org.locationtech.spatial4j.shape SpatialRelation
                                                      Shape
                                                      Rectangle)
-                   (org.locationtech.jts.geom Coordinate Geometry)
+                   (org.locationtech.jts.geom Coordinate
+                                              Envelope
+                                              Geometry)
+                  ; (org.locationtech.spatial4j.shape Circle
+                  ;                                   Rectangle
+                  ;                                   Point)
                    (org.locationtech.spatial4j.shape.impl GeoCircle
                                                           PointImpl
                                                           RectangleImpl)
@@ -116,13 +121,12 @@
     for argument information."))
 
 (defn crosses-dateline?
-  #?(:clj [^Geometry jts-geom]
-     :cljs [^jsts.geom.Geometry jsts-geom])
+  #?(:clj [jts-geom]
+     :cljs [jsts-geom])
   (<= 180
-      #?(:clj (.getWidth (.getEnvelopeInternal jts-geom))
-         :cljs (.getWidth (impl/get-envelope-internal jsts-geom)))))
-;; TODO: NEED TO FIX THIS TO WORK ONLY ON crs/gf-wgs84
-                           ;(to-jsts jsts-geom crs/gf-wgs84))))))
+      #?(:clj (.getWidth (.getEnvelopeInternal (to-jts jts-geom crs/gf-wgs84)))
+         :cljs (.getWidth (impl/get-envelope-internal (to-jsts jsts-geom crs/gf-wgs84))))))
+
 
 
 #?(:clj
@@ -379,8 +383,12 @@
   (/ (* 180 180) (* Math/PI Math/PI)))
 
 (defn square-degrees->steradians
+  [square-degrees]
+  (/ square-degrees square-degree-in-steradians))
+
+(defn steradians->square-degrees
   [steradians]
-  (/ steradians square-degree-in-steradians))
+  (* steradians square-degree-in-steradians))
 
 #?(:clj
    (defn jts-point
@@ -435,20 +443,22 @@
 #?(:clj (def north-pole (spatial4j-point 90 0)))
 #?(:clj (def south-pole (spatial4j-point -90 0)))
 
-#?(:clj
-   (defn circle
+(defn circle
   "A spatial4j circle around the given point or lat,long, with radius in
   meters."
-     ([point meters]
+  (#?(:clj [point meters]
+      :cljs [^js/jsts.geom.Point point meters])
    ; GeoCircle takes its radius in degrees, so we need to figure out how many
    ; degrees to use. For anything under 100 kilometers we use a local
    ; approximation; for bigger stuff we use the mean radius.
-      (let [point   (to-spatial4j-point point)
-            radians (if (< 1e6 meters)
-                      (distance->radians meters)
-                      (distance-at-point->radians meters point))
-            degrees (radians->degrees radians)]
-        (GeoCircle. point degrees earth)))))
+   (let [point   #?(:clj (to-spatial4j-point point)
+                    :cljs point)
+         radians (if (< 1e6 meters)
+                   (distance->radians meters)
+                   (distance-at-point->radians meters point))
+         degrees (radians->degrees radians)]
+        #?(:clj (GeoCircle. point degrees earth)
+           :cljs (.buffer point degrees)))))
 
 #?(:clj
    (defn distance-in-degrees
@@ -590,19 +600,27 @@
                .getHeight
                )))
 
-#?(:cljs
-   (defn split-across-dateline
-     [^js/jsts.geom.Envelope e]
-     (let [min-x (.getMinX e)
-           min-y (.getMinY e)
-           max-x (.getMaxX e)
-           max-y (.getMaxY e)]
-       [(geo.jsts/envelope
-         (geo.jsts/coordinate max-x min-y)
-         (geo.jsts/coordinate 180 max-y))
-        (geo.jsts/envelope
-         (geo.jsts/coordinate -180 min-y)
-         (geo.jsts/coordinate min-x max-y))])))
+(defn split-across-dateline
+  #?(:clj [e]
+     :cljs [^js/jsts.geom.Envelope e])
+  (let [min-x (.getMinX e)
+        min-y (.getMinY e)
+        max-x (.getMaxX e)
+        max-y (.getMaxY e)]
+    #?(:clj (if (> min-x max-x)
+               [(jts/envelope (jts/coordinate max-x min-y)
+                              (jts/coordinate 180 max-y))
+                (jts/envelope (jts/coordinate -180 min-y)
+                              (jts/coordinate min-x max-y))]
+               e)
+       :cljs (if (> min-x max-x)
+               [(geo.jsts/envelope
+                 (geo.jsts/coordinate max-x min-y)
+                 (geo.jsts/coordinate 180 max-y))
+                (geo.jsts/envelope
+                 (geo.jsts/coordinate -180 min-y)
+                 (geo.jsts/coordinate min-x max-y))]
+               e))))
 
 (defn width
   "Returns the height of a shape, in degrees."
@@ -617,23 +635,43 @@
          (reduce + (map impl/get-width (-> geom impl/get-envelope-internal
                                            split-across-dateline)))))))
 
-#?(:clj
-   (defn area-in-square-degrees
-  "The area of a rectangle in square degrees."
-     [rect]
-     (.area vincenty-distance-calculator
-            ^Rectangle (to-shape rect))))
+(defn envelope-area-in-steradians
+  #?(:clj [^Envelope rect]
+     :cljs [rect])
+  (let [a #?(:clj abs
+             :cljs Math/abs)]
+    (* (a (- (degrees->radians (.getMinX rect))
+             (degrees->radians (.getMaxX rect))))
+       (a
+          (- (Math/sin (degrees->radians (.getMinY rect)))
+             (Math/sin (degrees->radians (.getMaxY rect))))))))
 
-#?(:clj
-   (defn area
-  "The area of a rectangle in square meters. Note that spatial4j's term 'area'
-  actually refers to solid angle, not area; we convert by multiplying by the
-  earth's radius at the midpoint of the rectangle."
-     [rect]
-     (-> rect
-         area-in-square-degrees
-         square-degrees->steradians
-         steradians->area)))
+(defn area-in-steradians
+  "The solid angle area of a rectangle in steradians."
+  #?(:clj [rect]
+     :cljs [^js/jsts.geom.Rectangle rect])
+  (let [crosses? #?(:clj (.getCrossesDateLine ^RectangleImpl rect)
+                    :cljs (crosses-dateline? rect))]
+      (if (not crosses?)
+        (envelope-area-in-steradians rect)
+        (reduce + (map envelope-area-in-steradians (-> rect split-across-dateline))))))
+
+
+(defn area-in-square-degrees
+  "The solid angle area of a rectangle in square degrees."
+  [rect]
+  #?(:clj (steradians->square-degrees (area-in-steradians rect))
+                ;(.area vincenty-distance-calculator
+               ;  ^Rectangle (to-shape rect))
+     :cljs (steradians->square-degrees (area-in-steradians rect))))
+
+(defn area
+  "The area of a rectangle in square meters."
+  [rect]
+  (-> rect
+      area-in-square-degrees
+      square-degrees->steradians
+      steradians->area))
 
 #?(:clj
    (defn relate
