@@ -7,7 +7,7 @@
             [geo.spatial :as spatial]
             [midje.sweet :refer [fact facts falsey roughly truthy]])
   (:import (org.locationtech.jts.geom Geometry Polygon)
-           (com.uber.h3core.util GeoCoord)))
+           (com.uber.h3core.util LatLng)))
 
 (def geohash-with-hole (jts/set-srid (.difference (spatial/to-jts (geohash/geohash "u4pruy"))
                                                   (spatial/to-jts (geohash/geohash "u4pruyk")))
@@ -36,17 +36,17 @@
        (fact "jts boundary"
              (type (sut/to-jts h3-example-str)) => Polygon)
        (fact "geo coord"
-             (type (first (sut/geo-coords (geohash/geohash "u4pruy")))) => GeoCoord)
+             (type (first (sut/geo-coords (geohash/geohash "u4pruy")))) => LatLng)
        (fact "edges"
              (sut/edge "871f24ac4ffffff" "871f24ac0ffffff") => "1371f24ac4ffffff"
              (sut/edge-origin "1371f24ac4ffffff") => "871f24ac4ffffff"
              (sut/edge-destination "1371f24ac4ffffff") => "871f24ac0ffffff"
              (sut/edges "871f24ac4ffffff") => ["1171f24ac4ffffff" "1271f24ac4ffffff" "1371f24ac4ffffff"
                                                "1471f24ac4ffffff" "1571f24ac4ffffff" "1671f24ac4ffffff"]
-             (type (first (sut/edge-boundary "1371f24ac4ffffff"))) => GeoCoord)
+             (type (first (sut/edge-boundary "1371f24ac4ffffff"))) => LatLng)
        (fact "h3->pt"
              (str (spatial/to-jts (sut/h3->pt h3-example-str)))
-             => "POINT (10.423520614389421 57.65506363212537)")
+             => "POINT (10.423520614389426 57.655063632125355)")
        (fact "pentagon"
              (sut/pentagon? "8f28308280f18f2") => falsey
              (sut/pentagon? "821c07fffffffff") => truthy)
@@ -159,28 +159,26 @@
                                                           "871f24accffffff" "871f24aebffffff" "871f24ae8ffffff"
                                                           "871f24aecffffff" "871f24ae1ffffff" "871f24ae0ffffff"]])
        (fact "polyfill"
-             (sut/polyfill (geohash/geohash "u4pruy") 9) => [617541026878062591
-                                                             617541026799157247
+             (sut/polyfill (geohash/geohash "u4pruy") 9) => [617541026877538303
                                                              617541026800992255
-                                                             617541026877538303
+                                                             617541026878062591
+                                                             617541026799157247
                                                              617541026879111167]
-             (sut/polyfill-address (geohash/geohash "u4pruy") 9) => ["891f24ac54bffff"
-                                                                     "891f24ac097ffff"
+             (sut/polyfill-address (geohash/geohash "u4pruy") 9) => ["891f24ac543ffff"
                                                                      "891f24ac0b3ffff"
-                                                                     "891f24ac543ffff"
+                                                                     "891f24ac54bffff"
+                                                                     "891f24ac097ffff"
                                                                      "891f24ac55bffff"]
              (-> (jts/multi-polygon [(spatial/to-jts (geohash/geohash "u4pruy"))
                                      (spatial/to-jts (geohash/geohash "u4pruu"))])
                  (sut/polyfill 9))
-             => [617541026878062591 617541026799157247 617541026800992255 617541026877538303
-                 617541026879111167 617541026790244351 617541026789982207 617541026789720063
-                 617541026789457919]
+             => [617541026877538303 617541026800992255 617541026878062591 617541026799157247
+                 617541026879111167 617541026790244351 617541026789457919 617541026789982207 617541026789720063]
              (-> (jts/multi-polygon [(spatial/to-jts (geohash/geohash "u4pruy"))
                                      (spatial/to-jts (geohash/geohash "u4pruu"))])
                  (sut/polyfill-address 9))
-             => ["891f24ac54bffff" "891f24ac097ffff" "891f24ac0b3ffff" "891f24ac543ffff"
-                 "891f24ac55bffff" "891f24ac00fffff" "891f24ac00bffff" "891f24ac007ffff"
-                 "891f24ac003ffff"]
+             => ["891f24ac543ffff" "891f24ac0b3ffff" "891f24ac54bffff" "891f24ac097ffff"
+                 "891f24ac55bffff" "891f24ac00fffff" "891f24ac003ffff" "891f24ac00bffff" "891f24ac007ffff"]
              (count (sut/polyfill geohash-with-hole 12)) => 1648)
        (fact "polyfill works recursively on large shapes"
              (count (sut/polyfill (jts/polygon-wkt [[-70 42 -70 44 -68 44 -68 42 -70 42]]) 7)) => 6769
