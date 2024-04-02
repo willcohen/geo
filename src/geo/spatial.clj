@@ -20,7 +20,7 @@
             [geo.jts :as jts])
   (:import (ch.hsr.geohash WGS84Point)
            (ch.hsr.geohash.util VincentyGeodesy)
-           (com.uber.h3core.util GeoCoord)
+           (com.uber.h3core.util LatLng)
            (org.locationtech.spatial4j.shape SpatialRelation
                                              Shape
                                              Rectangle)
@@ -142,7 +142,7 @@
     ([this c1 c2 geometry-factory]
      (crs/transform-geom this c1 c2 geometry-factory)))
 
-  GeoCoord
+  LatLng
   (to-shape [this] (spatial4j-point this))
   (to-jts
     ([this] (jts-point this))
@@ -188,7 +188,7 @@
   (to-geohash-point [this] (geohash-point this))
   (to-h3-point [this] (h3-point this))
 
-  com.uber.h3core.util.GeoCoord
+  com.uber.h3core.util.LatLng
   (latitude [this] (.lat this))
   (longitude [this] (.lng this))
   (to-spatial4j-point [this] (spatial4j-point this))
@@ -279,11 +279,11 @@
    (WGS84Point. lat long)))
 
 (defn h3-point
-  "Returns a GeoCoord used by the H3 library."
+  "Returns a LatLng used by the H3 library."
   ([point]
    (h3-point (latitude point) (longitude point)))
   ([lat long]
-   (GeoCoord. lat long)))
+   (LatLng. lat long)))
 
 (def point spatial4j-point)
 

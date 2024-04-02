@@ -7,14 +7,15 @@
             :comments "same as Clojure"}
   :description "Geospatial operations over points, lines, polys, geohashes, etc."
   :dependencies
-  [[org.clojure/math.numeric-tower "0.0.5"]
+  [[org.clojure/math.numeric-tower "0.1.0"]
    [ch.hsr/geohash "1.4.0"]
-   [com.uber/h3 "3.7.1"]
-   [org.locationtech.proj4j/proj4j "1.1.4"]
+   [com.uber/h3 "4.1.1"]
+   [org.locationtech.proj4j/proj4j "1.3.0"]
+   [org.locationtech.proj4j/proj4j-epsg "1.3.0"]
    [org.locationtech.spatial4j/spatial4j "0.8"]
-   [org.locationtech.jts/jts-core "1.18.2"]
-   [org.locationtech.jts.io/jts-io-common "1.18.2"]
-   [org.wololo/jts2geojson "0.16.1"]]
+   [org.locationtech.jts/jts-core "1.19.0"]
+   [org.locationtech.jts.io/jts-io-common "1.19.0"]
+   [org.wololo/jts2geojson "0.18.1"]]
   :codox {:themes [:rdash]}
   :profiles {:dev {:global-vars {*warn-on-reflection* true}
                    :plugins [[lein-midje "3.2.2"]

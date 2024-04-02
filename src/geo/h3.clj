@@ -8,7 +8,7 @@
             [clojure.math.numeric-tower :as numeric-tower])
   (:import (ch.hsr.geohash GeoHash)
            (com.uber.h3core AreaUnit H3Core LengthUnit)
-           (com.uber.h3core.util GeoCoord)
+           (com.uber.h3core.util LatLng)
            (geo.spatial Point Shapelike)
            (org.locationtech.jts.geom Geometry LinearRing MultiPolygon Polygon)
            (org.locationtech.spatial4j.shape.impl RectangleImpl)))
@@ -37,58 +37,58 @@
   (.stringToH3 h3-inst h))
 
 (defn- h3->pt-long
-  "Long helper to return a GeoCoord of the center point of a cell."
+  "Long helper to return a LatLng of the center point of a cell."
   [^Long h]
-  (.h3ToGeo h3-inst h))
+  (.cellToLatLng h3-inst h))
 
 (defn- h3->pt-string
-  "String helper to return a GeoCoord of the center point of a cell."
+  "String helper to return a LatLng of the center point of a cell."
   [^String h]
-  (.h3ToGeo h3-inst h))
+  (.cellToLatLng h3-inst h))
 
 (defn- get-resolution-string
   "String helper to return the resolution of a cell."
   [^String h]
-  (.h3GetResolution h3-inst h))
+  (.getResolution h3-inst h))
 
 (defn get-resolution-long
   "Long helper to return the resolution of a cell."
   [^Long h]
-  (.h3GetResolution h3-inst h))
+  (.getResolution h3-inst h))
 
 (defn get-faces-string
   "String helper to return the icosahedron faces intersected by a cell, represented
   by integers 0-19."
   [^String h]
-  (into [] (.h3GetFaces h3-inst h)))
+  (into [] (.getIcosahedronFaces h3-inst h)))
 
 (defn get-faces-long
   "Long helper to return the icosahedron faces intersected by a cell, represented
   by integers 0-19."
   [^Long h]
-  (into [] (.h3GetFaces h3-inst h)))
+  (into [] (.getIcosahedronFaces h3-inst h)))
 
 (defn- k-ring-string
   "String helper to return a list of neighboring indices in all directions for 'k' rings."
   [^String h ^Integer k]
-  (.kRing h3-inst h k))
+  (.gridDisk h3-inst h k))
 
 (defn- k-ring-long
   "Long helper to return a list of neighboring indices in all directions for 'k' rings."
   [^Long h ^Integer k]
-  (.kRing h3-inst h k))
+  (.gridDisk h3-inst h k))
 
 (defn- k-ring-distances-string
   "String helper to return a list of neighboring indices in all directions for 'k' rings,
   ordered by distance from the origin index."
   [^String h ^Integer k]
-  (.kRingDistances h3-inst h k))
+  (.gridDiskDistances h3-inst h k))
 
 (defn- k-ring-distances-long
   "String helper to return a list of neighboring indices in all directions for 'k' rings,
   ordered by distance from the origin index."
   [^Long h ^Integer k]
-  (.kRingDistances h3-inst h k))
+  (.gridDiskDistances h3-inst h k))
 
 (defn- to-jts-common
   "Convert a geo boundary to JTS Polygon."
@@ -103,127 +103,127 @@
 (defn- to-jts-string
   "String helper for: given an H3 identifier, return a Polygon of that cell."
   [^String h]
-  (to-jts-common (.h3ToGeoBoundary h3-inst h)))
+  (to-jts-common (.cellToBoundary h3-inst h)))
 
 (defn- to-jts-long
   "Long helper for: given an H3 identifier, return a Polygon of that cell."
   [^Long h]
-  (to-jts-common (.h3ToGeoBoundary h3-inst h)))
+  (to-jts-common (.cellToBoundary h3-inst h)))
 
 (defn- edge-string
   "String helper for: given both 'from' and 'to' cells, get a unidirectional edge index."
   [^String from ^String to]
-  (.getH3UnidirectionalEdge h3-inst from to))
+  (.cellsToDirectedEdge h3-inst from to))
 
 (defn- edge-long
   "Long helper for: given both 'from' and 'to' cells, get a unidirectional edge index."
   [^Long from ^Long to]
-  (.getH3UnidirectionalEdge h3-inst from to))
+  (.cellsToDirectedEdge h3-inst from to))
 
 (defn- edge-origin-string
   "String helper for: given a unidirectional edge, get its origin."
   [^String edge]
-  (.getOriginH3IndexFromUnidirectionalEdge h3-inst edge))
+  (.getDirectedEdgeOrigin h3-inst edge))
 
 (defn- edge-origin-long
   "Long helper for: given a unidirectional edge, get its origin."
   [^Long edge]
-  (.getOriginH3IndexFromUnidirectionalEdge h3-inst edge))
+  (.getDirectedEdgeOrigin h3-inst edge))
 
 (defn- edge-destination-string
   "String helper for: given a unidirectional edge, get its destination."
   [^String edge]
-  (.getDestinationH3IndexFromUnidirectionalEdge h3-inst edge))
+  (.getDirectedEdgeDestination h3-inst edge))
 
 (defn- edge-destination-long
   "Long helper for: given a unidirectional edge, get its destination."
   [^Long edge]
-  (.getDestinationH3IndexFromUnidirectionalEdge h3-inst edge))
+  (.getDirectedEdgeDestination h3-inst edge))
 
 (defn- edges-string
   "String helper to get all edges originating from an index."
   [^String cell]
-  (into [] (.getH3UnidirectionalEdgesFromHexagon h3-inst cell)))
+  (into [] (.originToDirectedEdges h3-inst cell)))
 
 (defn- edges-long
   "Long helper to get all edges originating from an index."
   [^Long cell]
-  (into [] (.getH3UnidirectionalEdgesFromHexagon h3-inst cell)))
+  (into [] (.originToDirectedEdges h3-inst cell)))
 
 (defn- edge-boundary-string
   "String helper to get coordinates representing the edge."
   [^String edge]
-  (into [] (.getH3UnidirectionalEdgeBoundary h3-inst edge)))
+  (into [] (.directedEdgeToBoundary h3-inst edge)))
 
 (defn- edge-boundary-long
   "Long helper to get coordinates representing the edge."
   [^Long edge]
-  (into [] (.getH3UnidirectionalEdgeBoundary h3-inst edge)))
+  (into [] (.directedEdgeToBoundary h3-inst edge)))
 
 (defn- pentagon?-string
   "String helper to check if an index is a pentagon"
   [^String cell]
-  (.h3IsPentagon h3-inst cell))
+  (.isPentagon h3-inst cell))
 
 (defn- pentagon?-long
   "Long helper to check if an index is a pentagon"
   [^Long cell]
-  (.h3IsPentagon h3-inst cell))
+  (.isPentagon h3-inst cell))
 
 (defn- is-valid?-string
   "String helper to check if an index is valid"
   [^String cell]
-  (.h3IsValid h3-inst cell))
+  (.isValidCell h3-inst cell))
 
 (defn- is-valid?-long
   "Long helper to check if an index is valid"
   [^Long cell]
-  (.h3IsValid h3-inst cell))
+  (.isValidCell h3-inst cell))
 
 (defn- neighbors?-string
   "String helper to check if cells are neighbors"
   [^String c1 ^String c2]
-  (.h3IndexesAreNeighbors h3-inst c1 c2))
+  (.areNeighborCells h3-inst c1 c2))
 
 (defn- neighbors?-long
-  "String helper to check if cells are neighbors"
+  "Long helper to check if cells are neighbors"
   [^Long c1 ^Long c2]
-  (.h3IndexesAreNeighbors h3-inst c1 c2))
+  (.areNeighborCells h3-inst c1 c2))
 
 (defn- h3-distance-string
   "String helper to return the distance in number of h3 cells"
   [^String c1 ^String c2]
-  (.h3Distance h3-inst c1 c2))
+  (.gridDistance h3-inst c1 c2))
 
 (defn- h3-distance-long
   "Long helper to return the distance in number of h3 cells"
   [^Long c1 ^Long c2]
-  (.h3Distance h3-inst c1 c2))
+  (.gridDistance h3-inst c1 c2))
 
 (defn- h3-line-string
   "String helper to return the line of indexes between cells"
   [^String c1 ^String c2]
-  (.h3Line h3-inst c1 c2))
+  (.gridPathCells h3-inst c1 c2))
 
 (defn- h3-line-long
   "Long helper to return the line of indexes between cells"
   [^Long c1 ^Long c2]
-  (.h3Line h3-inst c1 c2))
+  (.gridPathCells h3-inst c1 c2))
 
 (defn- h3-to-center-child-string
   "String helper to return the center child at the given resolution"
   [^String cell ^Integer child-res]
-  (.h3ToCenterChild h3-inst cell child-res))
+  (.cellToCenterChild h3-inst cell child-res))
 
 (defn- h3-to-center-child-long
   "String helper to return the center child at the given resolution"
   [^Long cell ^Integer child-res]
-  (.h3ToCenterChild h3-inst cell child-res))
+  (.cellToCenterChild h3-inst cell child-res))
 
 (defprotocol H3Index
   (to-string [this] "Return index as a string.")
   (to-long [this] "Return index as a long.")
-  (h3->pt [this] "Return a GeoCoord of the center point of a cell.")
+  (h3->pt [this] "Return a LatLng of the center point of a cell.")
   (get-resolution [this] "Return the resolution of a cell.")
   (get-faces [this] "Return the icosahedron faces intersected by a cell, represented by integers 0-19.")
   (k-ring [this k] "Return a list of neighboring indices in all directions for 'k' rings.")
@@ -338,7 +338,7 @@
   ([^Point pt ^Integer res]
    (pt->h3 (spatial/latitude pt) (spatial/longitude pt) res))
   ([^Double lat ^Double lng ^Integer res]
-   (try (.geoToH3 h3-inst lat lng res)
+   (try (.latLngToCell h3-inst lat lng res)
         (catch Exception e
           (throw (Exception. (string/join ["Failed to complete pt->h3 for lat " lat ", long " lng, ", res " res ". H3 exception message: " e])))))))
 
@@ -347,13 +347,13 @@
   ([^Point pt ^Integer res]
    (pt->h3-address (spatial/latitude pt) (spatial/longitude pt) res))
   ([^Double lat ^Double lng ^Integer res]
-   (try (.geoToH3Address h3-inst lat lng res)
+   (try (.latLngToCellAddress h3-inst lat lng res)
         (catch Exception e
           (throw (Exception. (string/join ["Failed to complete pt->h3-address for lat " lat ", long " lng, ", res " res ". H3 exception message: " e])))))))
 
 
 (defn geo-coords
-  "Return all coordinates for a given Shapelike as GeoCoords"
+  "Return all coordinates for a given Shapelike as LatLngs"
   [^Shapelike s]
   (map spatial/h3-point (jts/coordinates (spatial/to-jts s))))
 
@@ -402,17 +402,17 @@
   "Given a set of H3 cells, return a compacted set of cells, at possibly coarser resolutions."
   [cells]
   (cond (number? (first cells))
-        (.compact h3-inst cells)
+        (.compactCells h3-inst cells)
         (string? (first cells))
-        (.compactAddress h3-inst cells)))
+        (.compactCellAddresses h3-inst cells)))
 
 (defn uncompact
   "Given a set of H3 cells, return an uncompacted set of cells to a certain resolution."
   [cells res]
   (cond (number? (first cells))
-        (.uncompact h3-inst cells res)
+        (.uncompactCells h3-inst cells res)
         (string? (first cells))
-        (.uncompactAddress h3-inst cells res)))
+        (.uncompactCellAddresses h3-inst cells res)))
 
 (defn- safe-uncompact
   "Given a set of H3 cells, if the maximum size of the uncompacted set is below a
@@ -439,7 +439,7 @@
   (let [h (polyfill-p-common s)]
     (if (.isEmpty (geo.spatial/to-jts s))
       []
-      (compact (.polyfillAddress h3-inst (geo-coords (:e h)) (map geo-coords (:i h)) res)))))
+      (compact (.polygonToCellAddresses h3-inst (geo-coords (:e h)) (map geo-coords (:i h)) res)))))
 
 (defn- polyfill-p
   "Helper to polyfill a single polygon, returning indexes in long form."
@@ -447,7 +447,7 @@
   (let [h (polyfill-p-common s)]
     (if (.isEmpty (geo.spatial/to-jts s))
       []
-      (compact (.polyfill h3-inst (geo-coords (:e h)) (map geo-coords (:i h)) res)))))
+      (compact (.polygonToCells h3-inst (geo-coords (:e h)) (map geo-coords (:i h)) res)))))
 
 (defn- hex-radius-in-meters
   "See h3's bbox.c."
@@ -545,7 +545,7 @@
                  flatten))))
 
 (defn- geocoord-array-wkt
-  "Create a wkt-style data structure from a collection of GeoCoords."
+  "Create a wkt-style data structure from a collection of LatLngs."
   [coords]
   (->> coords
        (map (fn [coord] [(spatial/longitude coord) (spatial/latitude coord)]))
@@ -555,7 +555,7 @@
 (defn- geocoord-multi-helper
   "Helper function to pass to postwalk for multi-polygon generators."
   [v]
-  (if (instance? GeoCoord (first v))
+  (if (instance? LatLng (first v))
     (geocoord-array-wkt v)
     v))
 
@@ -563,7 +563,7 @@
   "Multi-polygon generator for numbers"
   [cells]
   (as-> cells v
-        (.h3SetToMultiPolygon h3-inst v true)
+        (.cellsToMultiPolygon h3-inst v true)
         (mapv #(into [] %) v)
         (walk/postwalk geocoord-multi-helper v)
         (jts/multi-polygon-wkt v)))
@@ -572,7 +572,7 @@
   "Multi-polygon generator for strings"
   [cells]
   (as-> cells v
-        (.h3AddressSetToMultiPolygon h3-inst v true)
+        (.cellAddressesToMultiPolygon h3-inst v true)
         (mapv #(into [] %) v)
         (walk/postwalk geocoord-multi-helper v)
         (jts/multi-polygon-wkt v)))
@@ -588,10 +588,10 @@
 (defn get-res-0-indexes
   "Return a collection of all base cells"
   []
-  (.getRes0Indexes h3-inst))
+  (.getRes0Cells h3-inst))
 
 (defn get-pentagon-indexes
   "Return a collection of all topologically pentagonal
   cells at the given resolution"
   [res]
-  (.getPentagonIndexes h3-inst res))
+  (.getPentagons h3-inst res))
